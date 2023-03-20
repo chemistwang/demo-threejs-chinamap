@@ -100,8 +100,12 @@ function Map3D(props: Props) {
         lastPick.object.material[0].color.set("#06092A");
       }
       lastPick = null;
+      // lastPick = intersects.find(
+      //   (item: any) => item.object.material && item.object.material.length === 2
+      // );
+      // 优化
       lastPick = intersects.find(
-        (item: any) => item.object.material && item.object.material.length === 2
+        (item: any) => item.object.userData.isChangeColor
       );
 
       if (lastPick) {

@@ -61,7 +61,11 @@ export function drawExtrudeMesh(
     //   wireframe: true,
   });
 
-  const mesh = new THREE.Mesh(geometry, [material, materialSide]);
+  const mesh: any = new THREE.Mesh(geometry, [material, materialSide]);
+  // userData 存储自定义属性
+  mesh.userData = {
+    isChangeColor: true,
+  };
   return { mesh };
 }
 
