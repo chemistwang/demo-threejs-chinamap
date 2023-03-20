@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import ToolTip from "../tooltip";
-import { draw2dLabel, generateMapObject3D } from "./drawFunc";
+import { draw2dLabel, drawSpot, generateMapObject3D } from "./drawFunc";
 import { GeoJsonType } from "./typed";
 import gsap from "gsap";
 
@@ -104,6 +104,22 @@ function Map3D(props: Props) {
     scene.add(labelObject2D);
 
     /**
+     * 绘制点位
+     */
+    const spotObject3D = new THREE.Object3D();
+    const spotList: any = [];
+    label2dData.forEach((item: any) => {
+      const { featureCenterCoord } = item;
+      const spotObjectItem = drawSpot(featureCenterCoord);
+      if (spotObjectItem && spotObjectItem.circle && spotObjectItem.ring) {
+        spotObject3D.add(spotObjectItem.circle);
+        spotObject3D.add(spotObjectItem.ring);
+        spotList.push(spotObjectItem.ring);
+      }
+    });
+    scene.add(spotObject3D);
+
+    /**
      * 初始化 CameraHelper
      */
     const helper = new THREE.CameraHelper(camera);
@@ -196,6 +212,7 @@ function Map3D(props: Props) {
      */
     gsap.to(mapObject3D.scale, { x: 2, y: 2, z: 2, duration: 1 });
     gsap.to(labelObject2D.scale, { x: 2, y: 2, z: 2, duration: 1 });
+    gsap.to(spotObject3D.scale, { x: 2, y: 2, z: 2, duration: 1 });
 
     const animate = function () {
       requestAnimationFrame(animate);
@@ -203,6 +220,17 @@ function Map3D(props: Props) {
       raycaster.setFromCamera(pointer, camera);
       renderer.render(scene, camera);
       labelRenderer.render(scene, camera);
+
+      // 圆环
+      spotList.forEach((mesh: any) => {
+        mesh._s += 0.01;
+        mesh.scale.set(1 * mesh._s, 1 * mesh._s, 1 * mesh._s);
+        if (mesh._s <= 2) {
+          mesh.material.opacity = 2 - mesh._s;
+        } else {
+          mesh._s = 1;
+        }
+      });
     };
     animate();
 

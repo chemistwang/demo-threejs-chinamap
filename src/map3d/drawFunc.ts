@@ -151,3 +151,31 @@ export const draw2dLabel = (coord: [number, number], proviceName: string) => {
     return labelObject;
   }
 };
+
+// 绘制圆点
+export const drawSpot = (coord: [number, number]) => {
+  if (coord && coord.length) {
+    const POSITION_Z = 2.1;
+    /**
+     * 绘制圆点
+     */
+    const spotGeometry = new THREE.CircleGeometry(0.5, 200);
+    const spotMaterial = new THREE.MeshBasicMaterial({
+      color: "#3EC5FB",
+      side: THREE.DoubleSide,
+    });
+    const circle = new THREE.Mesh(spotGeometry, spotMaterial);
+    circle.position.set(coord[0], -coord[1], POSITION_Z);
+
+    // 圆环
+    const ringGeometry = new THREE.RingGeometry(0.5, 0.7, 50);
+    const ringMaterial = new THREE.MeshBasicMaterial({
+      color: "#3FC5FB",
+      side: THREE.DoubleSide,
+      transparent: true,
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.position.set(coord[0], -coord[1], POSITION_Z);
+    return { circle, ring };
+  }
+};
