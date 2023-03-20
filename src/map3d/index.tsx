@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import ToolTip from "../tooltip";
 import { generateMapObject3D } from "./drawFunc";
 import { GeoJsonType } from "./typed";
 
@@ -13,6 +14,11 @@ let lastPick: any = null;
 function Map3D(props: Props) {
   const { geoJson } = props;
   const mapRef = useRef<any>();
+  const toolTipRef = useRef<any>();
+
+  const [toolTipData, setToolTipData] = useState<any>({
+    text: "",
+  });
 
   useEffect(() => {
     const currentDom = mapRef.current;
@@ -109,9 +115,21 @@ function Map3D(props: Props) {
       );
 
       if (lastPick) {
+        const properties = lastPick.object.parent.customProperties;
         if (lastPick.object.material[0]) {
           lastPick.object.material[0].color.set("#3497F5");
         }
+
+        if (toolTipRef.current && toolTipRef.current.style) {
+          toolTipRef.current.style.left = e.clientX + 2 + "px";
+          toolTipRef.current.style.top = e.clientY + 2 + "px";
+          toolTipRef.current.style.visibility = "visible";
+        }
+        setToolTipData({
+          text: properties.name,
+        });
+      } else {
+        toolTipRef.current.style.visibility = "hidden";
       }
     };
 
@@ -132,7 +150,19 @@ function Map3D(props: Props) {
     };
   }, []);
 
-  return <div ref={mapRef} style={{ width: "100%", height: "100%" }}></div>;
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
+      <div ref={mapRef} style={{ width: "100%", height: "100%" }}></div>
+      <ToolTip innterRef={toolTipRef} data={toolTipData}></ToolTip>
+    </div>
+  );
 }
 
 export default Map3D;
