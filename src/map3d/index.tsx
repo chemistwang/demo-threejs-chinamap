@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import ToolTip from "../tooltip";
-import { draw2dLabel, drawSpot, generateMapObject3D } from "./drawFunc";
+import {
+  draw2dLabel,
+  drawLineBetween2Spot,
+  drawSpot,
+  generateMapObject3D,
+} from "./drawFunc";
 import { GeoJsonType } from "./typed";
 import gsap from "gsap";
 
@@ -120,6 +125,38 @@ function Map3D(props: Props) {
     scene.add(spotObject3D);
 
     /**
+     * 绘制连线（随机生成两个点位）
+     */
+    const MAX_LINE_COUNT = 5; // 随机生成5组线
+    let connectLine: any[] = [];
+    for (let count = 0; count < MAX_LINE_COUNT; count++) {
+      const midIndex = Math.floor(label2dData.length / 2);
+      const indexStart = Math.floor(Math.random() * midIndex);
+      const indexEnd = Math.floor(Math.random() * midIndex) + midIndex - 1;
+      connectLine.push({
+        indexStart,
+        indexEnd,
+      });
+    }
+
+    /**
+     * 绘制飞行的点
+     */
+    const flyObject3D = new THREE.Object3D();
+    const flySpotList: any = [];
+    connectLine.forEach((item: any) => {
+      const { indexStart, indexEnd } = item;
+      const { flyLine, flySpot } = drawLineBetween2Spot(
+        label2dData[indexStart].featureCenterCoord,
+        label2dData[indexEnd].featureCenterCoord
+      );
+      flyObject3D.add(flyLine);
+      flyObject3D.add(flySpot);
+      flySpotList.push(flySpot);
+    });
+    scene.add(flyObject3D);
+
+    /**
      * 初始化 CameraHelper
      */
     const helper = new THREE.CameraHelper(camera);
@@ -210,9 +247,10 @@ function Map3D(props: Props) {
     /**
      * 动画
      */
-    gsap.to(mapObject3D.scale, { x: 2, y: 2, z: 2, duration: 1 });
-    gsap.to(labelObject2D.scale, { x: 2, y: 2, z: 2, duration: 1 });
-    gsap.to(spotObject3D.scale, { x: 2, y: 2, z: 2, duration: 1 });
+    gsap.to(mapObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
+    gsap.to(labelObject2D.scale, { x: 2, y: 2, z: 1, duration: 1 });
+    gsap.to(spotObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
+    gsap.to(flyObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
 
     const animate = function () {
       requestAnimationFrame(animate);
@@ -230,6 +268,15 @@ function Map3D(props: Props) {
         } else {
           mesh._s = 1;
         }
+      });
+
+      // 飞行的圆点
+      flySpotList.forEach(function (mesh: any) {
+        mesh._s += 0.003;
+        let tankPosition = new THREE.Vector3();
+        // getPointAt() 根据弧长在曲线上的位置。必须在范围[0，1]内。
+        tankPosition = mesh.curve.getPointAt(mesh._s % 1);
+        mesh.position.set(tankPosition.x, tankPosition.y, tankPosition.z);
       });
     };
     animate();

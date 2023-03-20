@@ -111,10 +111,12 @@ export function generateMapObject3D(
     // 名字
     const featureName: string = basicFeatureItem.properties.name;
 
-    label2dData.push({
-      featureCenterCoord,
-      featureName,
-    });
+    if (featureCenterCoord) {
+      label2dData.push({
+        featureCenterCoord,
+        featureName,
+      });
+    }
 
     // MultiPolygon 类型
     if (featureType === "MultiPolygon") {
@@ -152,14 +154,16 @@ export const draw2dLabel = (coord: [number, number], proviceName: string) => {
   }
 };
 
+// Z 轴坐标
+const POSITION_Z = 3.1;
+
 // 绘制圆点
 export const drawSpot = (coord: [number, number]) => {
   if (coord && coord.length) {
-    const POSITION_Z = 2.1;
     /**
      * 绘制圆点
      */
-    const spotGeometry = new THREE.CircleGeometry(0.5, 200);
+    const spotGeometry = new THREE.CircleGeometry(0.2, 200);
     const spotMaterial = new THREE.MeshBasicMaterial({
       color: "#3EC5FB",
       side: THREE.DoubleSide,
@@ -168,7 +172,7 @@ export const drawSpot = (coord: [number, number]) => {
     circle.position.set(coord[0], -coord[1], POSITION_Z);
 
     // 圆环
-    const ringGeometry = new THREE.RingGeometry(0.5, 0.7, 50);
+    const ringGeometry = new THREE.RingGeometry(0.2, 0.3, 50);
     const ringMaterial = new THREE.MeshBasicMaterial({
       color: "#3FC5FB",
       side: THREE.DoubleSide,
@@ -178,4 +182,69 @@ export const drawSpot = (coord: [number, number]) => {
     ring.position.set(coord[0], -coord[1], POSITION_Z);
     return { circle, ring };
   }
+};
+
+/**
+ * 线上移动物体
+ */
+export const drawflySpot = (curve: any) => {
+  const aGeo = new THREE.SphereGeometry(0.2);
+  const aMater = new THREE.MeshBasicMaterial({
+    color: "#77f077",
+    side: THREE.DoubleSide,
+  });
+  const aMesh: any = new THREE.Mesh(aGeo, aMater);
+  // 保存曲线实例
+  aMesh.curve = curve;
+  aMesh._s = 0;
+  return aMesh;
+};
+
+// 绘制两点链接飞线
+export const drawLineBetween2Spot = (
+  coordStart: [number, number],
+  coordEnd: [number, number]
+) => {
+  const [x0, y0, z0] = [...coordStart, POSITION_Z];
+  const [x1, y1, z1] = [...coordEnd, POSITION_Z];
+  // 使用 QuadraticBezierCurve3 创建 三维二次贝塞尔曲线
+  const curve = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(x0, -y0, z0),
+    new THREE.Vector3((x0 + x1) / 2, -(y0 + y1) / 2, 20),
+    new THREE.Vector3(x1, -y1, z1)
+  );
+
+  const flySpot = drawflySpot(curve);
+
+  const lineGeometry = new THREE.BufferGeometry();
+  // 获取曲线上50个点
+  const points = curve.getPoints(50);
+  const positions = [];
+  const colors = [];
+  const color = new THREE.Color();
+
+  // 给每个顶点设置演示 实现渐变
+  for (let j = 0; j < points.length; j++) {
+    color.setHSL(0.21 + j, 0.77, 0.55 + j * 0.0025); // 色
+    colors.push(color.r, color.g, color.b);
+    positions.push(points[j].x, points[j].y, points[j].z);
+  }
+  // 放入顶点 和 设置顶点颜色
+  lineGeometry.setAttribute(
+    "position",
+    new THREE.BufferAttribute(new Float32Array(positions), 3, true)
+  );
+  lineGeometry.setAttribute(
+    "color",
+    new THREE.BufferAttribute(new Float32Array(colors), 3, true)
+  );
+
+  const material = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    // color: "red",
+    side: THREE.DoubleSide,
+  });
+  const flyLine = new THREE.Line(lineGeometry, material);
+
+  return { flyLine, flySpot };
 };
