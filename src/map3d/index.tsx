@@ -30,9 +30,14 @@ function Map3D() {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
     // 防止开发时重复渲染
-    if (!currentDom.hasChildNodes()) {
-      currentDom.appendChild(renderer.domElement);
+    // if (!currentDom.hasChildNodes()) {
+    //   currentDom.appendChild(renderer.domElement);
+    // }
+    // 这里修改为下面写法，否则 onresize 不生效
+    if (currentDom.childNodes[0]) {
+      currentDom.removeChild(currentDom.childNodes[0]);
     }
+    currentDom.appendChild(renderer.domElement);
 
     /**
      * 初始化模型（地图模型绘制的逻辑将在这里替换）
@@ -59,11 +64,28 @@ function Map3D() {
      */
     new OrbitControls(camera, renderer.domElement);
 
+    // 视窗伸缩
+    function onResize() {
+      // 更新摄像头
+      camera.aspect = currentDom.clientWidth / currentDom.clientHeight;
+      // 更新摄像机的投影矩阵
+      camera.updateProjectionMatrix();
+      // 更新渲染器
+      renderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
+      // 设置渲染器的像素比例
+      renderer.setPixelRatio(window.devicePixelRatio);
+    }
+
     const animate = function () {
       requestAnimationFrame(animate);
       renderer.render(scene, camera);
     };
     animate();
+
+    window.addEventListener("resize", onResize, false);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   return <div ref={mapRef} style={{ width: "100%", height: "100%" }}></div>;
