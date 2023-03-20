@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { generateMapObject3D } from "./drawFunc";
+import { GeoJsonType } from "./typed";
 
-function Map3D() {
+interface Props {
+  geoJson: GeoJsonType;
+}
+
+function Map3D(props: Props) {
+  const { geoJson } = props;
   const mapRef = useRef<any>();
 
   useEffect(() => {
@@ -40,12 +47,10 @@ function Map3D() {
     currentDom.appendChild(renderer.domElement);
 
     /**
-     * 初始化模型（地图模型绘制的逻辑将在这里替换）
+     * 初始化模型（绘制3D模型）
      */
-    const geometry = new THREE.BoxGeometry(1, 2, 3);
-    const material = new THREE.MeshBasicMaterial({ color: "#fff" });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+    const mapObject3D = generateMapObject3D(geoJson);
+    scene.add(mapObject3D);
 
     /**
      * 初始化 CameraHelper
