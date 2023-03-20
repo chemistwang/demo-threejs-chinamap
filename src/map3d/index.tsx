@@ -10,14 +10,21 @@ import {
   CSS2DObject,
 } from "three/examples/jsm/renderers/CSS2DRenderer";
 
+export type ProjectionFnParamType = {
+  center: [number, number];
+  scale: number;
+};
+
 interface Props {
   geoJson: GeoJsonType;
+  dblClickFn: (customProperties: any) => void;
+  projectionFnParam: ProjectionFnParamType;
 }
 
 let lastPick: any = null;
 
 function Map3D(props: Props) {
-  const { geoJson } = props;
+  const { geoJson, dblClickFn, projectionFnParam } = props;
   const mapRef = useRef<any>();
   const map2dRef = useRef<any>();
   const toolTipRef = useRef<any>();
@@ -76,7 +83,10 @@ function Map3D(props: Props) {
     /**
      * 初始化模型（绘制3D模型）
      */
-    const { mapObject3D, label2dData } = generateMapObject3D(geoJson);
+    const { mapObject3D, label2dData } = generateMapObject3D(
+      geoJson,
+      projectionFnParam
+    );
     scene.add(mapObject3D);
 
     /**
@@ -167,6 +177,19 @@ function Map3D(props: Props) {
       }
     };
 
+    // 鼠标双击事件
+    const onDblclickEvent = () => {
+      const intersects = raycaster.intersectObjects(scene.children);
+      const target = intersects.find(
+        (item: any) => item.object.userData.isChangeColor
+      );
+      if (target) {
+        const obj: any = target.object.parent;
+        const p = obj.customProperties;
+        dblClickFn(p);
+      }
+    };
+
     const animate = function () {
       requestAnimationFrame(animate);
       // 通过摄像机和鼠标位置更新射线
@@ -178,12 +201,14 @@ function Map3D(props: Props) {
 
     window.addEventListener("resize", onResize, false);
     window.addEventListener("mousemove", onMouseMoveEvent, false);
+    window.addEventListener("dblclick", onDblclickEvent, false);
 
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouseMoveEvent);
+      window.removeEventListener("dblclick", onDblclickEvent);
     };
-  }, []);
+  }, [geoJson]);
 
   return (
     <div

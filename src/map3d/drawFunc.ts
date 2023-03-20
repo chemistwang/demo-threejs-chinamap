@@ -9,6 +9,7 @@ import {
   GeometryType,
   ExtendObject3D,
 } from "./typed";
+import { ProjectionFnParamType } from ".";
 
 // 绘制挤出的材质
 export function drawExtrudeMesh(
@@ -74,17 +75,19 @@ export function drawExtrudeMesh(
 // 生成地图3D模型
 export function generateMapObject3D(
   mapdata: GeoJsonType,
-  center: [number, number] = [104.0, 37.5]
+  projectionFnParam: ProjectionFnParamType
 ) {
   // 地图对象
   const mapObject3D = new THREE.Object3D();
   // 地图数据
   const { features: basicFeatures } = mapdata;
 
+  const { center, scale } = projectionFnParam;
+
   const projectionFn = d3
     .geoMercator()
     .center(center)
-    .scale(80)
+    .scale(scale)
     .translate([0, 0]);
 
   const label2dData: any = []; // 存储自定义 2d 标签数据
