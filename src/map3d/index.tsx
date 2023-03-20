@@ -2,8 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import ToolTip from "../tooltip";
-import { generateMapObject3D } from "./drawFunc";
+import { draw2dLabel, generateMapObject3D } from "./drawFunc";
 import { GeoJsonType } from "./typed";
+
+import {
+  CSS2DRenderer,
+  CSS2DObject,
+} from "three/examples/jsm/renderers/CSS2DRenderer";
 
 interface Props {
   geoJson: GeoJsonType;
@@ -14,6 +19,7 @@ let lastPick: any = null;
 function Map3D(props: Props) {
   const { geoJson } = props;
   const mapRef = useRef<any>();
+  const map2dRef = useRef<any>();
   const toolTipRef = useRef<any>();
 
   const [toolTipData, setToolTipData] = useState<any>({
@@ -55,10 +61,36 @@ function Map3D(props: Props) {
     currentDom.appendChild(renderer.domElement);
 
     /**
+     * 创建css2 Renderer 渲染器
+     */
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
+    labelRenderer.domElement.style.position = "absolute";
+    labelRenderer.domElement.style.top = "0px";
+    const labelRendererDom = map2dRef.current;
+    if (labelRendererDom?.childNodes[0]) {
+      labelRendererDom.removeChild(labelRendererDom.childNodes[0]);
+    }
+    labelRendererDom.appendChild(labelRenderer.domElement);
+
+    /**
      * 初始化模型（绘制3D模型）
      */
-    const mapObject3D = generateMapObject3D(geoJson);
+    const { mapObject3D, label2dData } = generateMapObject3D(geoJson);
     scene.add(mapObject3D);
+
+    /**
+     * 绘制 2D 面板
+     */
+    const labelObject2D = new THREE.Object3D();
+    label2dData.forEach((item: any) => {
+      const { featureCenterCoord, featureName } = item;
+      const labelObjectItem = draw2dLabel(featureCenterCoord, featureName);
+      if (labelObjectItem) {
+        labelObject2D.add(labelObjectItem);
+      }
+    });
+    scene.add(labelObject2D);
 
     /**
      * 初始化 CameraHelper
@@ -75,7 +107,8 @@ function Map3D(props: Props) {
     /**
      * 初始化控制器
      */
-    new OrbitControls(camera, renderer.domElement);
+    // new OrbitControls(camera, renderer.domElement);
+    new OrbitControls(camera, labelRenderer.domElement);
 
     // 视窗伸缩
     function onResize() {
@@ -85,6 +118,7 @@ function Map3D(props: Props) {
       camera.updateProjectionMatrix();
       // 更新渲染器
       renderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
+      labelRenderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
       // 设置渲染器的像素比例
       renderer.setPixelRatio(window.devicePixelRatio);
     }
@@ -138,6 +172,7 @@ function Map3D(props: Props) {
       // 通过摄像机和鼠标位置更新射线
       raycaster.setFromCamera(pointer, camera);
       renderer.render(scene, camera);
+      labelRenderer.render(scene, camera);
     };
     animate();
 
@@ -159,6 +194,7 @@ function Map3D(props: Props) {
         position: "relative",
       }}
     >
+      <div ref={map2dRef} />
       <div ref={mapRef} style={{ width: "100%", height: "100%" }}></div>
       <ToolTip innterRef={toolTipRef} data={toolTipData}></ToolTip>
     </div>

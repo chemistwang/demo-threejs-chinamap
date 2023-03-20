@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import * as d3 from "d3";
+import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
+
 import {
   GeoJsonType,
   GeoJsonFeature,
@@ -85,6 +87,8 @@ export function generateMapObject3D(
     .scale(80)
     .translate([0, 0]);
 
+  const label2dData: any = []; // 存储自定义 2d 标签数据
+
   // 每个省的数据
   basicFeatures.forEach((basicFeatureItem: GeoJsonFeature) => {
     // 每个省份的地图对象
@@ -98,10 +102,16 @@ export function generateMapObject3D(
     const featureCoords: GeometryCoordinates<GeometryType> =
       basicFeatureItem.geometry.coordinates;
     // 每个中心点位置
-    const featureCenterCoord: [number, number] =
-      basicFeatureItem.properties.center;
+    const featureCenterCoord: any =
+      basicFeatureItem.properties.centroid &&
+      projectionFn(basicFeatureItem.properties.centroid);
     // 名字
     const featureName: string = basicFeatureItem.properties.name;
+
+    label2dData.push({
+      featureCenterCoord,
+      featureName,
+    });
 
     // MultiPolygon 类型
     if (featureType === "MultiPolygon") {
@@ -124,5 +134,17 @@ export function generateMapObject3D(
     mapObject3D.add(provinceMapObject3D);
   });
 
-  return mapObject3D;
+  return { mapObject3D, label2dData };
 }
+
+// 绘制二维标签
+export const draw2dLabel = (coord: [number, number], proviceName: string) => {
+  if (coord && coord.length) {
+    const labelDiv = document.createElement("div");
+    labelDiv.innerText = proviceName;
+    labelDiv.style.color = "#fff";
+    const labelObject = new CSS2DObject(labelDiv);
+    labelObject.position.set(coord[0], -coord[1], 0);
+    return labelObject;
+  }
+};
