@@ -5,9 +5,9 @@ import { GeoJsonType } from "./map3d/typed";
 
 // 地图放大倍率
 const MapScale: any = {
-  province: 200,
-  city: 400,
-  district: 600,
+  province: 100,
+  city: 200,
+  district: 300,
 };
 
 function App() {
@@ -16,7 +16,7 @@ function App() {
   const [projectionFnParam, setProjectionFnParam] =
     useState<ProjectionFnParamType>({
       center: [104.0, 37.5],
-      scale: 80,
+      scale: 40,
     });
 
   useEffect(() => {

@@ -4,6 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import ToolTip from "../tooltip";
 import { draw2dLabel, generateMapObject3D } from "./drawFunc";
 import { GeoJsonType } from "./typed";
+import gsap from "gsap";
 
 import {
   CSS2DRenderer,
@@ -189,6 +190,12 @@ function Map3D(props: Props) {
         dblClickFn(p);
       }
     };
+
+    /**
+     * 动画
+     */
+    gsap.to(mapObject3D.scale, { x: 2, y: 2, z: 2, duration: 1 });
+    gsap.to(labelObject2D.scale, { x: 2, y: 2, z: 2, duration: 1 });
 
     const animate = function () {
       requestAnimationFrame(animate);
