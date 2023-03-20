@@ -15,6 +15,7 @@ import {
   CSS2DRenderer,
   CSS2DObject,
 } from "three/examples/jsm/renderers/CSS2DRenderer";
+import { drawRadar, radarData, RadarOption } from "./radar";
 
 export type ProjectionFnParamType = {
   center: [number, number];
@@ -41,6 +42,10 @@ function Map3D(props: Props) {
 
   useEffect(() => {
     const currentDom = mapRef.current;
+
+    const ratio = {
+      value: 0,
+    };
 
     /**
      * 初始化场景
@@ -157,6 +162,14 @@ function Map3D(props: Props) {
     scene.add(flyObject3D);
 
     /**
+     * 绘制雷达
+     */
+    radarData.forEach((item: RadarOption) => {
+      const planeMesh = drawRadar(item, ratio);
+      scene.add(planeMesh);
+    });
+
+    /**
      * 初始化 CameraHelper
      */
     const helper = new THREE.CameraHelper(camera);
@@ -253,6 +266,9 @@ function Map3D(props: Props) {
     gsap.to(flyObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
 
     const animate = function () {
+      // 雷达
+      ratio.value += 0.01;
+
       requestAnimationFrame(animate);
       // 通过摄像机和鼠标位置更新射线
       raycaster.setFromCamera(pointer, camera);
