@@ -8,6 +8,8 @@ interface Props {
   geoJson: GeoJsonType;
 }
 
+let lastPick: any = null;
+
 function Map3D(props: Props) {
   const { geoJson } = props;
   const mapRef = useRef<any>();
@@ -81,15 +83,48 @@ function Map3D(props: Props) {
       renderer.setPixelRatio(window.devicePixelRatio);
     }
 
+    /**
+     * 设置 raycaster
+     */
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    // 鼠标移入事件
+    const onMouseMoveEvent = (e: MouseEvent) => {
+      const intersects = raycaster.intersectObjects(scene.children);
+      pointer.x = (e.clientX / currentDom.clientWidth) * 2 - 1;
+      pointer.y = -(e.clientY / currentDom.clientHeight) * 2 + 1;
+
+      // 如果存在，则鼠标移出需要重置
+      if (lastPick) {
+        lastPick.object.material[0].color.set("#06092A");
+      }
+      lastPick = null;
+      lastPick = intersects.find(
+        (item: any) => item.object.material && item.object.material.length === 2
+      );
+
+      if (lastPick) {
+        if (lastPick.object.material[0]) {
+          lastPick.object.material[0].color.set("#3497F5");
+        }
+      }
+    };
+
     const animate = function () {
       requestAnimationFrame(animate);
+      // 通过摄像机和鼠标位置更新射线
+      raycaster.setFromCamera(pointer, camera);
       renderer.render(scene, camera);
     };
     animate();
 
     window.addEventListener("resize", onResize, false);
+    window.addEventListener("mousemove", onMouseMoveEvent, false);
+
     return () => {
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("mousemove", onMouseMoveEvent);
     };
   }, []);
 
