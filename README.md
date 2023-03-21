@@ -2,7 +2,7 @@
 
 ## 效果图
 
-![3dmap](https://cdn.chemputer.top/notebook/threejs/3dmap/3dmap.gif)
+![3dmap](/demo/3dmap.gif)
 
 ## 运行
 
