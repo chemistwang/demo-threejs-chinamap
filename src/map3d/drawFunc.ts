@@ -31,7 +31,7 @@ export function drawExtrudeMesh(
     bevelEnabled: false, // 对挤出的形状应用是否斜角
   });
 
-  const material = new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshPhongMaterial({
     color: "#06092A",
     transparent: true,
     opacity: 0.9,

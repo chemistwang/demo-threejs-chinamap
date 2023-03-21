@@ -187,6 +187,17 @@ function Map3D(props: Props) {
     // new OrbitControls(camera, renderer.domElement);
     new OrbitControls(camera, labelRenderer.domElement);
 
+    /**
+     * 新增光源
+     */
+    const light = new THREE.PointLight(0xffffff, 1);
+    light.position.set(0, -5, 30);
+    scene.add(light);
+
+    // 光源辅助线
+    const lightHelper = new THREE.PointLightHelper(light);
+    scene.add(lightHelper);
+
     // 视窗伸缩
     function onResize() {
       // 更新摄像头
@@ -228,7 +239,7 @@ function Map3D(props: Props) {
       if (lastPick) {
         const properties = lastPick.object.parent.customProperties;
         if (lastPick.object.material[0]) {
-          lastPick.object.material[0].color.set("#3497F5");
+          lastPick.object.material[0].color.set("#0284ff");
         }
 
         if (toolTipRef.current && toolTipRef.current.style) {
