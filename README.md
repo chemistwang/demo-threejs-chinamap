@@ -18,6 +18,7 @@ npm i && npm start
 - [x] 轨迹线
 - [x] 雷达
 - [x] 点光源
+- [x] Line2
 
 ## 技术栈
 

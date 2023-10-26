@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import * as d3 from "d3";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
+import { Line2 } from "three/examples/jsm/lines/Line2";
+import { LineGeometry } from "three/examples/jsm/lines/LineGeometry";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial";
 
 import {
   GeoJsonType,
@@ -11,12 +14,17 @@ import {
 } from "./typed";
 import { ProjectionFnParamType } from ".";
 
+// Z 轴坐标
+const POSITION_MESH = 3;
+const POSITION_Z = 3.1;
+
 // 绘制挤出的材质
 export function drawExtrudeMesh(
   point: [number, number][],
   projectionFn: any
 ): any {
   const shape = new THREE.Shape();
+  const pointsArray = [];
 
   for (let i = 0; i < point.length; i++) {
     const [x, y]: any = projectionFn(point[i]); // 将每一个经纬度转化为坐标点
@@ -24,6 +32,7 @@ export function drawExtrudeMesh(
       shape.moveTo(x, -y);
     }
     shape.lineTo(x, -y);
+    pointsArray.push(x, -y, POSITION_MESH);
   }
 
   const geometry = new THREE.ExtrudeGeometry(shape, {
@@ -69,7 +78,19 @@ export function drawExtrudeMesh(
   mesh.userData = {
     isChangeColor: true,
   };
-  return { mesh };
+
+  // 边框线，赋值空间点坐标，3个一组
+  const lineGeometry = new LineGeometry();
+  lineGeometry.setPositions(pointsArray);
+
+  const lineMaterial = new LineMaterial({
+    color: 0x41c0fb,
+    linewidth: 3,
+  });
+  lineMaterial.resolution.set(window.innerWidth, window.innerHeight);
+  const line = new Line2(lineGeometry, lineMaterial);
+
+  return { mesh, line };
 }
 
 // 生成地图3D模型
@@ -122,8 +143,9 @@ export function generateMapObject3D(
     if (featureType === "MultiPolygon") {
       featureCoords.forEach((multiPolygon: [number, number][][]) => {
         multiPolygon.forEach((polygon: [number, number][]) => {
-          const { mesh } = drawExtrudeMesh(polygon, projectionFn);
+          const { mesh, line } = drawExtrudeMesh(polygon, projectionFn);
           provinceMapObject3D.add(mesh);
+          provinceMapObject3D.add(line);
         });
       });
     }
@@ -131,8 +153,9 @@ export function generateMapObject3D(
     // Polygon 类型
     if (featureType === "Polygon") {
       featureCoords.forEach((polygon: [number, number][]) => {
-        const { mesh } = drawExtrudeMesh(polygon, projectionFn);
+        const { mesh, line } = drawExtrudeMesh(polygon, projectionFn);
         provinceMapObject3D.add(mesh);
+        provinceMapObject3D.add(line);
       });
     }
 
@@ -153,9 +176,6 @@ export const draw2dLabel = (coord: [number, number], proviceName: string) => {
     return labelObject;
   }
 };
-
-// Z 轴坐标
-const POSITION_Z = 3.1;
 
 // 绘制圆点
 export const drawSpot = (coord: [number, number]) => {
