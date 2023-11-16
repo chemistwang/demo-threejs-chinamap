@@ -7,6 +7,7 @@ import {
   drawLineBetween2Spot,
   drawSpot,
   generateMapObject3D,
+  POSITION_Z,
 } from "./drawFunc";
 import { GeoJsonType } from "./typed";
 import gsap from "gsap";
@@ -15,6 +16,9 @@ import {
   CSS2DRenderer,
   CSS2DObject,
 } from "three/examples/jsm/renderers/CSS2DRenderer";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+
 import { drawRadar, radarData, RadarOption } from "./radar";
 
 export type ProjectionFnParamType = {
@@ -129,6 +133,50 @@ function Map3D(props: Props) {
     });
     scene.add(spotObject3D);
 
+    // Models
+    // coneUncompression.glb 是压缩过的模型，需要用dracoLoader加载
+    // cone.glb 是未压缩，用 gltfLoader 加载即可
+
+    const modelObject3D = new THREE.Object3D();
+    // let mixer: any = null;
+    let modelMixer: any = [];
+    const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath("/draco/");
+    loader.setDRACOLoader(dracoLoader);
+
+    // loader.load("/models/coneUncompression.glb", (glb) => {
+    loader.load("/models/cone.glb", (glb) => {
+      label2dData.forEach((item: any) => {
+        // console.log(item, "0-0-0-");
+        const { featureCenterCoord } = item;
+        const clonedModel = glb.scene.clone();
+        const mixer = new THREE.AnimationMixer(clonedModel);
+        const clonedAnimations = glb.animations.map((clip) => {
+          return clip.clone();
+        });
+        clonedAnimations.forEach((clip) => {
+          mixer.clipAction(clip).play();
+        });
+
+        // 添加每个model的mixer
+        modelMixer.push(mixer);
+
+        // 设置模型位置
+        clonedModel.position.set(
+          featureCenterCoord[0],
+          -featureCenterCoord[1],
+          POSITION_Z
+        );
+        // 设置模型大小
+        clonedModel.scale.set(0.5, 0.5, 1);
+        // clonedModel.rotateX(-Math.PI / 8);
+        modelObject3D.add(clonedModel);
+      });
+
+      scene.add(modelObject3D);
+    });
+
     /**
      * 绘制连线（随机生成两个点位）
      */
@@ -190,7 +238,7 @@ function Map3D(props: Props) {
     /**
      * 新增光源
      */
-    const light = new THREE.PointLight(0xffffff, 1);
+    const light = new THREE.PointLight(0xffffff, 1.5);
     light.position.set(0, -5, 30);
     scene.add(light);
 
@@ -275,8 +323,23 @@ function Map3D(props: Props) {
     gsap.to(labelObject2D.scale, { x: 2, y: 2, z: 1, duration: 1 });
     gsap.to(spotObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
     gsap.to(flyObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
+    gsap.to(modelObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
 
+    /**
+     * Animate
+     */
+    const clock = new THREE.Clock();
+    let previousTime = 0;
     const animate = function () {
+      // const elapsedTime = clock.getElapsedTime();
+      // const deltaTime = elapsedTime - previousTime;
+      // previousTime = elapsedTime;
+
+      // Update mixer
+      // mixer?.update(deltaTime);
+      const delta = clock.getDelta();
+      modelMixer.map((item: any) => item.update(delta));
+
       // 雷达
       ratio.value += 0.01;
 

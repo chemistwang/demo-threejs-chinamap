@@ -16,7 +16,7 @@ import { ProjectionFnParamType } from ".";
 
 // Z 轴坐标
 const POSITION_MESH = 3;
-const POSITION_Z = 3.1;
+export const POSITION_Z = 3.1;
 
 // 绘制挤出的材质
 export function drawExtrudeMesh(

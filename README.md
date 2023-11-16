@@ -19,6 +19,7 @@ npm i && npm start
 - [x] 雷达
 - [x] 点光源
 - [x] Line2
+- [x] 加载 glb 动画模型
 
 ## 技术栈
 
