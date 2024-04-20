@@ -3,23 +3,22 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import ToolTip from "../tooltip";
 import {
-  draw2dLabel,
   drawLineBetween2Spot,
-  drawSpot,
+  generateMapLabel2D,
   generateMapObject3D,
-  POSITION_Z,
+  generateMapSpot,
 } from "./drawFunc";
 import { GeoJsonType } from "./typed";
 import gsap from "gsap";
 
-import {
-  CSS2DRenderer,
-  CSS2DObject,
-} from "three/examples/jsm/renderers/CSS2DRenderer";
+import { CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 
 import { drawRadar, radarData, RadarOption } from "./radar";
+import { initScene } from "./scene";
+import { mapConfig } from "./mapConfig";
+import { initCamera } from "./camera";
 
 export type ProjectionFnParamType = {
   center: [number, number];
@@ -46,7 +45,7 @@ function Map3D(props: Props) {
 
   useEffect(() => {
     const currentDom = mapRef.current;
-
+    if (!currentDom) return;
     const ratio = {
       value: 0,
     };
@@ -54,18 +53,12 @@ function Map3D(props: Props) {
     /**
      * 初始化场景
      */
-    const scene = new THREE.Scene();
+    const scene = initScene();
 
     /**
      * 初始化摄像机
      */
-    const camera = new THREE.PerspectiveCamera(
-      30,
-      currentDom.clientWidth / currentDom.clientHeight,
-      0.1,
-      1000
-    );
-    camera.position.set(-10, -90, 130);
+    const { camera, cameraHelper } = initCamera(currentDom);
 
     /**
      * 初始化渲染器
@@ -107,31 +100,14 @@ function Map3D(props: Props) {
     /**
      * 绘制 2D 面板
      */
-    const labelObject2D = new THREE.Object3D();
-    label2dData.forEach((item: any) => {
-      const { featureCenterCoord, featureName } = item;
-      const labelObjectItem = draw2dLabel(featureCenterCoord, featureName);
-      if (labelObjectItem) {
-        labelObject2D.add(labelObjectItem);
-      }
-    });
-    scene.add(labelObject2D);
+    const labelObject2D = generateMapLabel2D(label2dData);
+    mapObject3D.add(labelObject2D);
 
     /**
      * 绘制点位
      */
-    const spotObject3D = new THREE.Object3D();
-    const spotList: any = [];
-    label2dData.forEach((item: any) => {
-      const { featureCenterCoord } = item;
-      const spotObjectItem = drawSpot(featureCenterCoord);
-      if (spotObjectItem && spotObjectItem.circle && spotObjectItem.ring) {
-        spotObject3D.add(spotObjectItem.circle);
-        spotObject3D.add(spotObjectItem.ring);
-        spotList.push(spotObjectItem.ring);
-      }
-    });
-    scene.add(spotObject3D);
+    const { spotList, spotObject3D } = generateMapSpot(label2dData);
+    mapObject3D.add(spotObject3D);
 
     // Models
     // coneUncompression.glb 是压缩过的模型，需要用dracoLoader加载
@@ -166,15 +142,15 @@ function Map3D(props: Props) {
         clonedModel.position.set(
           featureCenterCoord[0],
           -featureCenterCoord[1],
-          POSITION_Z
+          mapConfig.spotZIndex
         );
         // 设置模型大小
-        clonedModel.scale.set(0.5, 0.5, 1);
+        clonedModel.scale.set(0.3, 0.3, 0.6);
         // clonedModel.rotateX(-Math.PI / 8);
         modelObject3D.add(clonedModel);
       });
 
-      scene.add(modelObject3D);
+      mapObject3D.add(modelObject3D);
     });
 
     /**
@@ -207,7 +183,7 @@ function Map3D(props: Props) {
       flyObject3D.add(flySpot);
       flySpotList.push(flySpot);
     });
-    scene.add(flyObject3D);
+    mapObject3D.add(flyObject3D);
 
     /**
      * 绘制雷达
@@ -220,8 +196,7 @@ function Map3D(props: Props) {
     /**
      * 初始化 CameraHelper
      */
-    const helper = new THREE.CameraHelper(camera);
-    scene.add(helper);
+    scene.add(cameraHelper);
 
     /**
      * 初始化 AxesHelper
@@ -247,7 +222,7 @@ function Map3D(props: Props) {
     scene.add(lightHelper);
 
     // 视窗伸缩
-    function onResize() {
+    function onResizeEvent() {
       // 更新摄像头
       camera.aspect = currentDom.clientWidth / currentDom.clientHeight;
       // 更新摄像机的投影矩阵
@@ -273,7 +248,11 @@ function Map3D(props: Props) {
 
       // 如果存在，则鼠标移出需要重置
       if (lastPick) {
-        lastPick.object.material[0].color.set("#06092A");
+        // lastPick.object.material[0].color.set(mapConfig.mapColor);
+
+        const color = mapConfig.mapColorGradient[Math.floor(Math.random() * 4)];
+        lastPick.object.material[0].color.set(color);
+        lastPick.object.material[0].opacity = mapConfig.mapOpacity; // 设置完全不透明
       }
       lastPick = null;
       // lastPick = intersects.find(
@@ -287,7 +266,8 @@ function Map3D(props: Props) {
       if (lastPick) {
         const properties = lastPick.object.parent.customProperties;
         if (lastPick.object.material[0]) {
-          lastPick.object.material[0].color.set("#0284ff");
+          lastPick.object.material[0].color.set(mapConfig.mapHoverColor);
+          lastPick.object.material[0].opacity = 1; // 设置完全不透明
         }
 
         if (toolTipRef.current && toolTipRef.current.style) {
@@ -320,10 +300,6 @@ function Map3D(props: Props) {
      * 动画
      */
     gsap.to(mapObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
-    gsap.to(labelObject2D.scale, { x: 2, y: 2, z: 1, duration: 1 });
-    gsap.to(spotObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
-    gsap.to(flyObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
-    gsap.to(modelObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
 
     /**
      * Animate
@@ -371,12 +347,12 @@ function Map3D(props: Props) {
     };
     animate();
 
-    window.addEventListener("resize", onResize, false);
+    window.addEventListener("resize", onResizeEvent, false);
     window.addEventListener("mousemove", onMouseMoveEvent, false);
     window.addEventListener("dblclick", onDblclickEvent, false);
 
     return () => {
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", onResizeEvent);
       window.removeEventListener("mousemove", onMouseMoveEvent);
       window.removeEventListener("dblclick", onDblclickEvent);
     };

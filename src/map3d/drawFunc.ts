@@ -13,10 +13,7 @@ import {
   ExtendObject3D,
 } from "./typed";
 import { ProjectionFnParamType } from ".";
-
-// Z 轴坐标
-const POSITION_MESH = 3;
-export const POSITION_Z = 3.1;
+import { mapConfig } from "./mapConfig";
 
 // 绘制挤出的材质
 export function drawExtrudeMesh(
@@ -32,44 +29,46 @@ export function drawExtrudeMesh(
       shape.moveTo(x, -y);
     }
     shape.lineTo(x, -y);
-    pointsArray.push(x, -y, POSITION_MESH);
+    pointsArray.push(x, -y, mapConfig.topLineZIndex);
   }
 
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: 2, // 挤出的形状深度
+    depth: mapConfig.mapDepth, // 挤出的形状深度
     bevelEnabled: false, // 对挤出的形状应用是否斜角
   });
 
   const material = new THREE.MeshPhongMaterial({
-    color: "#06092A",
-    transparent: true,
-    opacity: 0.9,
+    // color: mapConfig.mapColor,
+    color: mapConfig.mapColorGradient[Math.floor(Math.random() * 4)], // 随机颜色
+    transparent: mapConfig.mapTransparent,
+    opacity: mapConfig.mapOpacity,
   });
 
   const materialSide = new THREE.ShaderMaterial({
     uniforms: {
       color1: {
-        value: new THREE.Color("#3F9FF3"),
+        value: new THREE.Color(mapConfig.mapSideColor1),
       },
       color2: {
-        value: new THREE.Color("#266BF0"),
+        value: new THREE.Color(mapConfig.mapSideColor2),
       },
     },
     vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-        }
-      `,
+      varying vec3 vPosition;
+      void main() {
+        vPosition = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
     fragmentShader: `
-          uniform vec3 color1;
-          uniform vec3 color2;
-          varying vec2 vUv;
-          void main() {
-            gl_FragColor = vec4(mix(color1, color2, vUv.y), 1.0);
-          }
-        `,
+      uniform vec3 color1;
+      uniform vec3 color2;
+      varying vec3 vPosition;
+      void main() {
+        vec3 mixColor = mix(color1, color2, 0.5 - vPosition.z * 0.2); // 使用顶点坐标 z 分量来控制混合
+        gl_FragColor = vec4(mixColor, 1.0);
+      }
+    `,
     //   wireframe: true,
   });
 
@@ -84,8 +83,8 @@ export function drawExtrudeMesh(
   lineGeometry.setPositions(pointsArray);
 
   const lineMaterial = new LineMaterial({
-    color: 0x41c0fb,
-    linewidth: 3,
+    color: mapConfig.topLineColor,
+    linewidth: mapConfig.topLineWidth,
   });
   lineMaterial.resolution.set(window.innerWidth, window.innerHeight);
   const line = new Line2(lineGeometry, lineMaterial);
@@ -165,14 +164,45 @@ export function generateMapObject3D(
   return { mapObject3D, label2dData };
 }
 
+// 生成地图2D标签
+export function generateMapLabel2D(label2dData: any) {
+  const labelObject2D = new THREE.Object3D();
+  label2dData.forEach((item: any) => {
+    const { featureCenterCoord, featureName } = item;
+    const labelObjectItem = draw2dLabel(featureCenterCoord, featureName);
+    if (labelObjectItem) {
+      labelObject2D.add(labelObjectItem);
+    }
+  });
+  return labelObject2D;
+}
+
+// 生成地图spot点位
+export function generateMapSpot(label2dData: any) {
+  const spotObject3D = new THREE.Object3D();
+  const spotList: any = [];
+  label2dData.forEach((item: any) => {
+    const { featureCenterCoord } = item;
+    const spotObjectItem = drawSpot(featureCenterCoord);
+    if (spotObjectItem && spotObjectItem.circle && spotObjectItem.ring) {
+      spotObject3D.add(spotObjectItem.circle);
+      spotObject3D.add(spotObjectItem.ring);
+      spotList.push(spotObjectItem.ring);
+    }
+  });
+  return { spotObject3D, spotList };
+}
+
 // 绘制二维标签
 export const draw2dLabel = (coord: [number, number], proviceName: string) => {
   if (coord && coord.length) {
+    // 模版字符串
+    const innerHTML = `<div class="your-classname" style="color: #fff">${proviceName}</div>`;
     const labelDiv = document.createElement("div");
-    labelDiv.innerText = proviceName;
-    labelDiv.style.color = "#fff";
+    labelDiv.innerHTML = innerHTML;
+    labelDiv.style.pointerEvents = "none"; // 禁用事件
     const labelObject = new CSS2DObject(labelDiv);
-    labelObject.position.set(coord[0], -coord[1], 0);
+    labelObject.position.set(coord[0], -coord[1], mapConfig.label2dZIndex);
     return labelObject;
   }
 };
@@ -189,7 +219,7 @@ export const drawSpot = (coord: [number, number]) => {
       side: THREE.DoubleSide,
     });
     const circle = new THREE.Mesh(spotGeometry, spotMaterial);
-    circle.position.set(coord[0], -coord[1], POSITION_Z);
+    circle.position.set(coord[0], -coord[1], mapConfig.spotZIndex);
 
     // 圆环
     const ringGeometry = new THREE.RingGeometry(0.2, 0.3, 50);
@@ -199,7 +229,7 @@ export const drawSpot = (coord: [number, number]) => {
       transparent: true,
     });
     const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.position.set(coord[0], -coord[1], POSITION_Z);
+    ring.position.set(coord[0], -coord[1], mapConfig.spotZIndex);
     return { circle, ring };
   }
 };
@@ -225,8 +255,8 @@ export const drawLineBetween2Spot = (
   coordStart: [number, number],
   coordEnd: [number, number]
 ) => {
-  const [x0, y0, z0] = [...coordStart, POSITION_Z];
-  const [x1, y1, z1] = [...coordEnd, POSITION_Z];
+  const [x0, y0, z0] = [...coordStart, mapConfig.spotZIndex];
+  const [x1, y1, z1] = [...coordEnd, mapConfig.spotZIndex];
   // 使用 QuadraticBezierCurve3 创建 三维二次贝塞尔曲线
   const curve = new THREE.QuadraticBezierCurve3(
     new THREE.Vector3(x0, -y0, z0),

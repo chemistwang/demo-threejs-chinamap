@@ -15,6 +15,7 @@ function ToolTip(props: any) {
         border: "2px solid #163FA2",
         visibility: "hidden",
         color: "#3B93E6",
+        pointerEvents: "none",
       }}
     >
       {text || "this is ToolTip"}
