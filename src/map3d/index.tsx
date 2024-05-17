@@ -7,6 +7,7 @@ import {
   generateMapLabel2D,
   generateMapObject3D,
   generateMapSpot,
+  getDynamicMapScale,
 } from "./drawFunc";
 import { GeoJsonType } from "./typed";
 import gsap from "gsap";
@@ -96,6 +97,11 @@ function Map3D(props: Props) {
       projectionFnParam
     );
     scene.add(mapObject3D);
+
+    /**
+     * 动态地图缩放大小
+     */
+    const mapScale = getDynamicMapScale(mapObject3D, currentDom);
 
     /**
      * 绘制 2D 面板
@@ -222,7 +228,7 @@ function Map3D(props: Props) {
     scene.add(lightHelper);
 
     // 视窗伸缩
-    function onResizeEvent() {
+    const onResizeEvent = () => {
       // 更新摄像头
       camera.aspect = currentDom.clientWidth / currentDom.clientHeight;
       // 更新摄像机的投影矩阵
@@ -232,7 +238,7 @@ function Map3D(props: Props) {
       labelRenderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
       // 设置渲染器的像素比例
       renderer.setPixelRatio(window.devicePixelRatio);
-    }
+    };
 
     /**
      * 设置 raycaster
@@ -299,7 +305,7 @@ function Map3D(props: Props) {
     /**
      * 动画
      */
-    gsap.to(mapObject3D.scale, { x: 2, y: 2, z: 1, duration: 1 });
+    gsap.to(mapObject3D.scale, { x: mapScale, y: mapScale, z: 1, duration: 1 });
 
     /**
      * Animate

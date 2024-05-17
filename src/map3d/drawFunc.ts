@@ -15,6 +15,27 @@ import {
 import { ProjectionFnParamType } from ".";
 import { mapConfig } from "./mapConfig";
 
+export function getDynamicMapScale(
+  mapObject3D: THREE.Object3D,
+  containerRef: any
+) {
+  // const width = containerRef.offsetWidth;
+  // const height = containerRef.offsetHeight;
+  const width = containerRef.clientWidth;
+  const height = containerRef.clientHeight;
+  const refArea = width * height;
+
+  const boundingBox = new THREE.Box3().setFromObject(mapObject3D);
+  // 获取包围盒的尺寸
+  const size = new THREE.Vector3();
+  boundingBox.getSize(size);
+  // 新增 Math.random避免缩放为1，没有动画效果
+  const scale =
+    Math.round(Math.sqrt(refArea / (size.x * size.y * 400))) +
+    parseFloat((Math.random() + 0.5).toFixed(2));
+  return scale;
+}
+
 // 绘制挤出的材质
 export function drawExtrudeMesh(
   point: [number, number][],
