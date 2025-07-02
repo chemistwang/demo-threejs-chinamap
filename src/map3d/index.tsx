@@ -20,6 +20,7 @@ import { drawRadar, radarData, RadarOption } from "./radar";
 import { initScene } from "./scene";
 import { mapConfig } from "./mapConfig";
 import { initCamera } from "./camera";
+import * as dat from "dat.gui";
 
 export type ProjectionFnParamType = {
   center: [number, number];
@@ -357,10 +358,133 @@ function Map3D(props: Props) {
     window.addEventListener("mousemove", onMouseMoveEvent, false);
     window.addEventListener("dblclick", onDblclickEvent, false);
 
+    // dat.GUI 配置
+    const gui = new dat.GUI();
+    gui.width = 300;
+    const colorConfig = {
+      mapColor: mapConfig.mapColor,
+      mapHoverColor: mapConfig.mapHoverColor,
+      mapSideColor1: mapConfig.mapSideColor1,
+      mapSideColor2: mapConfig.mapSideColor2,
+      topLineColor:
+        typeof mapConfig.topLineColor === "number"
+          ? `#${mapConfig.topLineColor.toString(16)}`
+          : mapConfig.topLineColor,
+    };
+    gui
+      .addColor(colorConfig, "mapColor")
+      .name("地图颜色")
+      .onChange((value: string) => {
+        mapConfig.mapColor = value;
+        // 实时更新所有地图mesh颜色
+        mapObject3D.traverse((obj: any) => {
+          if (obj.material && obj.material[0] && obj.userData.isChangeColor) {
+            obj.material[0].color.set(value);
+          }
+        });
+      });
+    gui
+      .addColor(colorConfig, "mapHoverColor")
+      .name("地图Hover颜色")
+      .onChange((value: string) => {
+        mapConfig.mapHoverColor = value;
+      });
+    gui
+      .addColor(colorConfig, "mapSideColor1")
+      .name("侧面渐变1")
+      .onChange((value: string) => {
+        mapConfig.mapSideColor1 = value;
+        mapObject3D.traverse((obj: any) => {
+          if (
+            obj.material &&
+            obj.material[1] &&
+            obj.material[1].uniforms &&
+            obj.material[1].uniforms.color1
+          ) {
+            obj.material[1].uniforms.color1.value.set(value);
+          }
+        });
+      });
+    gui
+      .addColor(colorConfig, "mapSideColor2")
+      .name("侧面渐变2")
+      .onChange((value: string) => {
+        mapConfig.mapSideColor2 = value;
+        mapObject3D.traverse((obj: any) => {
+          if (
+            obj.material &&
+            obj.material[1] &&
+            obj.material[1].uniforms &&
+            obj.material[1].uniforms.color2
+          ) {
+            obj.material[1].uniforms.color2.value.set(value);
+          }
+        });
+      });
+    gui
+      .addColor(colorConfig, "topLineColor")
+      .name("顶线颜色")
+      .onChange((value: string) => {
+        // 修正类型，将颜色字符串转为number
+        mapConfig.topLineColor = parseInt(value.replace("#", ""), 16);
+        mapObject3D.traverse((obj: any) => {
+          if (obj.type === "Line2" && obj.material) {
+            obj.material.color.set(value);
+          }
+        });
+      });
+
+    // dat.GUI 控制显示/隐藏辅助对象
+    const helperConfig = {
+      cameraHelper: true,
+      axesHelper: true,
+      lightHelper: true,
+    };
+    gui
+      .add(helperConfig, "cameraHelper")
+      .name("显示CameraHelper")
+      .onChange((v: boolean) => {
+        if (v) {
+          scene.add(cameraHelper);
+        } else {
+          scene.remove(cameraHelper);
+        }
+      });
+    gui
+      .add(helperConfig, "axesHelper")
+      .name("显示AxesHelper")
+      .onChange((v: boolean) => {
+        if (v) {
+          scene.add(axesHelper);
+        } else {
+          scene.remove(axesHelper);
+        }
+      });
+    gui
+      .add(helperConfig, "lightHelper")
+      .name("显示LightHelper")
+      .onChange((v: boolean) => {
+        if (v) {
+          scene.add(lightHelper);
+        } else {
+          scene.remove(lightHelper);
+        }
+      });
+
+    // 光强度调节
+    const lightConfig = { intensity: light.intensity };
+    gui
+      .add(lightConfig, "intensity", 0, 5)
+      .name("光强度")
+      .onChange((v: number) => {
+        light.intensity = v;
+      });
+
     return () => {
       window.removeEventListener("resize", onResizeEvent);
       window.removeEventListener("mousemove", onMouseMoveEvent);
       window.removeEventListener("dblclick", onDblclickEvent);
+      gui.destroy();
     };
   }, [geoJson]);
 
