@@ -221,7 +221,7 @@ export const draw2dLabel = (coord: [number, number], proviceName: string) => {
     const innerHTML = `<div class="your-classname" style="color: #fff">${proviceName}</div>`;
     const labelDiv = document.createElement("div");
     labelDiv.innerHTML = innerHTML;
-    labelDiv.style.pointerEvents = "none"; // 禁用事件
+    labelDiv.style.pointerEvents = "none"; // 禁用事件，否则tooltip悬浮在当前div会导致失去事件追踪
     const labelObject = new CSS2DObject(labelDiv);
     labelObject.position.set(coord[0], -coord[1], mapConfig.label2dZIndex);
     return labelObject;
