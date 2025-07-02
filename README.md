@@ -21,6 +21,7 @@ npm i && npm start
 - [x] Line2
 - [x] 加载 glb 动画模型
 - [x] 根据地图外接矩形动态缩放大小
+- [x] 新增 Dat GUI
 
 ## 技术栈
 
