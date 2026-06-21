@@ -19,10 +19,6 @@ function App() {
       scale: 40,
     });
 
-  useEffect(() => {
-    queryMapData(mapAdCode); // 默认的中国adcode码
-  }, [mapAdCode]);
-
   // 请求地图数据
   const queryMapData = useCallback(async (code: number) => {
     const response = await axios.get(
@@ -32,14 +28,18 @@ function App() {
     setGeoJson(data);
   }, []);
 
+  useEffect(() => {
+    queryMapData(mapAdCode); // 默认的中国adcode码
+  }, [mapAdCode, queryMapData]);
+
   // 双击事件
-  const dblClickFn = (customProperties: any) => {
+  const dblClickFn = useCallback((customProperties: any) => {
     setMapAdCode(customProperties.adcode);
     setProjectionFnParam({
       center: customProperties.centroid,
       scale: MapScale[customProperties.level],
     });
-  };
+  }, []);
 
   return (
     <>

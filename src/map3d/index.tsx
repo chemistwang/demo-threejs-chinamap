@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import ToolTip from "../tooltip";
@@ -20,6 +20,7 @@ import { drawRadar, radarData, RadarOption } from "./radar";
 import { initScene } from "./scene";
 import { mapConfig } from "./mapConfig";
 import { initCamera } from "./camera";
+import { disposeObject3D } from "./dispose";
 import * as dat from "dat.gui";
 
 export type ProjectionFnParamType = {
@@ -33,13 +34,11 @@ interface Props {
   projectionFnParam: ProjectionFnParamType;
 }
 
-let lastPick: any = null;
-
 function Map3D(props: Props) {
   const { geoJson, dblClickFn, projectionFnParam } = props;
-  const mapRef = useRef<any>();
-  const map2dRef = useRef<any>();
-  const toolTipRef = useRef<any>();
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const map2dRef = useRef<HTMLDivElement | null>(null);
+  const toolTipRef = useRef<HTMLDivElement | null>(null);
 
   const [toolTipData, setToolTipData] = useState<any>({
     text: "",
@@ -47,7 +46,13 @@ function Map3D(props: Props) {
 
   useEffect(() => {
     const currentDom = mapRef.current;
-    if (!currentDom) return;
+    const labelRendererDom = map2dRef.current;
+    if (!currentDom || !labelRendererDom) return;
+
+    let disposed = false;
+    let animationFrameId: number | undefined;
+    let lastPick: any = null;
+
     const ratio = {
       value: 0,
     };
@@ -67,13 +72,9 @@ function Map3D(props: Props) {
      */
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
-    // 防止开发时重复渲染
-    // if (!currentDom.hasChildNodes()) {
-    //   currentDom.appendChild(renderer.domElement);
-    // }
-    // 这里修改为下面写法，否则 onresize 不生效
-    if (currentDom.childNodes[0]) {
-      currentDom.removeChild(currentDom.childNodes[0]);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    while (currentDom.firstChild) {
+      currentDom.removeChild(currentDom.firstChild);
     }
     currentDom.appendChild(renderer.domElement);
 
@@ -84,9 +85,8 @@ function Map3D(props: Props) {
     labelRenderer.setSize(currentDom.clientWidth, currentDom.clientHeight);
     labelRenderer.domElement.style.position = "absolute";
     labelRenderer.domElement.style.top = "0px";
-    const labelRendererDom = map2dRef.current;
-    if (labelRendererDom?.childNodes[0]) {
-      labelRendererDom.removeChild(labelRendererDom.childNodes[0]);
+    while (labelRendererDom.firstChild) {
+      labelRendererDom.removeChild(labelRendererDom.firstChild);
     }
     labelRendererDom.appendChild(labelRenderer.domElement);
 
@@ -121,8 +121,7 @@ function Map3D(props: Props) {
     // cone.glb 是未压缩，用 gltfLoader 加载即可
 
     const modelObject3D = new THREE.Object3D();
-    // let mixer: any = null;
-    let modelMixer: any = [];
+    const modelMixers: THREE.AnimationMixer[] = [];
     const loader = new GLTFLoader();
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath("/draco/");
@@ -130,8 +129,12 @@ function Map3D(props: Props) {
 
     // loader.load("/models/coneUncompression.glb", (glb) => {
     loader.load("/models/cone.glb", (glb) => {
+      if (disposed) {
+        disposeObject3D(glb.scene);
+        return;
+      }
+
       label2dData.forEach((item: any) => {
-        // console.log(item, "0-0-0-");
         const { featureCenterCoord } = item;
         const clonedModel = glb.scene.clone();
         const mixer = new THREE.AnimationMixer(clonedModel);
@@ -143,7 +146,7 @@ function Map3D(props: Props) {
         });
 
         // 添加每个model的mixer
-        modelMixer.push(mixer);
+        modelMixers.push(mixer);
 
         // 设置模型位置
         clonedModel.position.set(
@@ -215,7 +218,7 @@ function Map3D(props: Props) {
      * 初始化控制器
      */
     // new OrbitControls(camera, renderer.domElement);
-    new OrbitControls(camera, labelRenderer.domElement);
+    const controls = new OrbitControls(camera, labelRenderer.domElement);
 
     /**
      * 新增光源
@@ -277,16 +280,20 @@ function Map3D(props: Props) {
           lastPick.object.material[0].opacity = 1; // 设置完全不透明
         }
 
-        if (toolTipRef.current && toolTipRef.current.style) {
-          toolTipRef.current.style.left = e.clientX + 2 + "px";
-          toolTipRef.current.style.top = e.clientY + 2 + "px";
-          toolTipRef.current.style.visibility = "visible";
+        const tooltipDom = toolTipRef.current;
+        if (tooltipDom) {
+          tooltipDom.style.left = e.clientX + 2 + "px";
+          tooltipDom.style.top = e.clientY + 2 + "px";
+          tooltipDom.style.visibility = "visible";
         }
         setToolTipData({
           text: properties.name,
         });
       } else {
-        toolTipRef.current.style.visibility = "hidden";
+        const tooltipDom = toolTipRef.current;
+        if (tooltipDom) {
+          tooltipDom.style.visibility = "hidden";
+        }
       }
     };
 
@@ -306,27 +313,29 @@ function Map3D(props: Props) {
     /**
      * 动画
      */
-    gsap.to(mapObject3D.scale, { x: mapScale, y: mapScale, z: 1, duration: 1 });
+    const scaleTween = gsap.to(mapObject3D.scale, {
+      x: mapScale,
+      y: mapScale,
+      z: 1,
+      duration: 1,
+    });
 
     /**
      * Animate
      */
     const clock = new THREE.Clock();
-    let previousTime = 0;
     const animate = function () {
-      // const elapsedTime = clock.getElapsedTime();
-      // const deltaTime = elapsedTime - previousTime;
-      // previousTime = elapsedTime;
+      if (disposed) {
+        return;
+      }
 
-      // Update mixer
-      // mixer?.update(deltaTime);
       const delta = clock.getDelta();
-      modelMixer.map((item: any) => item.update(delta));
+      modelMixers.forEach((item) => item.update(delta));
 
       // 雷达
       ratio.value += 0.01;
 
-      requestAnimationFrame(animate);
+      animationFrameId = requestAnimationFrame(animate);
       // 通过摄像机和鼠标位置更新射线
       raycaster.setFromCamera(pointer, camera);
       renderer.render(scene, camera);
@@ -481,12 +490,30 @@ function Map3D(props: Props) {
       });
 
     return () => {
+      disposed = true;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
       window.removeEventListener("resize", onResizeEvent);
       window.removeEventListener("mousemove", onMouseMoveEvent);
       window.removeEventListener("dblclick", onDblclickEvent);
+      scaleTween.kill();
+      controls.dispose();
+      dracoLoader.dispose();
       gui.destroy();
+      modelMixers.forEach((mixer) => mixer.stopAllAction());
+      disposeObject3D(scene);
+      renderer.dispose();
+
+      if (renderer.domElement.parentElement === currentDom) {
+        currentDom.removeChild(renderer.domElement);
+      }
+      if (labelRenderer.domElement.parentElement === labelRendererDom) {
+        labelRendererDom.removeChild(labelRenderer.domElement);
+      }
+      lastPick = null;
     };
-  }, [geoJson]);
+  }, [dblClickFn, geoJson, projectionFnParam]);
 
   return (
     <div
