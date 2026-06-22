@@ -1,4 +1,11 @@
-import { Dispatch, RefObject, SetStateAction, useEffect } from "react";
+import {
+  Dispatch,
+  RefObject,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { startMapAnimation } from "./animation";
 import { setupMapGui } from "./gui";
 import { bindMapInteractions } from "./interactions";
@@ -30,6 +37,10 @@ export function useMap3DScene(params: UseMap3DSceneParams) {
     toolTipRef,
     setToolTipData,
   } = params;
+  const [rebuildVersion, setRebuildVersion] = useState(0);
+  const requestRebuild = useCallback(() => {
+    setRebuildVersion((version) => version + 1);
+  }, []);
 
   useEffect(() => {
     const currentDom = mapRef.current;
@@ -46,6 +57,7 @@ export function useMap3DScene(params: UseMap3DSceneParams) {
       projectionFnParam,
       dblClickFn,
       setToolTipData,
+      requestRebuild,
     });
 
     buildMapContent(runtime);
@@ -62,6 +74,8 @@ export function useMap3DScene(params: UseMap3DSceneParams) {
     labelRef,
     mapRef,
     projectionFnParam,
+    rebuildVersion,
+    requestRebuild,
     setToolTipData,
     toolTipRef,
   ]);

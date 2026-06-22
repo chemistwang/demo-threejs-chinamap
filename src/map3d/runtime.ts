@@ -22,6 +22,7 @@ export type MapRuntime = {
   projectionFnParam: ProjectionFnParamType;
   dblClickFn: (customProperties: any) => void;
   setToolTipData: (data: TooltipData) => void;
+  requestRebuild: () => void;
   disposed: boolean;
   animationFrameId?: number;
   lastPick: any;
@@ -54,6 +55,7 @@ export type CreateMapRuntimeParams = {
   projectionFnParam: ProjectionFnParamType;
   dblClickFn: (customProperties: any) => void;
   setToolTipData: (data: TooltipData) => void;
+  requestRebuild: () => void;
 };
 
 export function createMapRuntime(params: CreateMapRuntimeParams): MapRuntime {
@@ -65,6 +67,7 @@ export function createMapRuntime(params: CreateMapRuntimeParams): MapRuntime {
     projectionFnParam,
     dblClickFn,
     setToolTipData,
+    requestRebuild,
   } = params;
 
   const scene = initScene();
@@ -101,6 +104,7 @@ export function createMapRuntime(params: CreateMapRuntimeParams): MapRuntime {
     projectionFnParam,
     dblClickFn,
     setToolTipData,
+    requestRebuild,
     disposed: false,
     lastPick: null,
     ratio: { value: 0 },

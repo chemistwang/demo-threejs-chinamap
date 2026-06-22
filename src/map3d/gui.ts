@@ -1,5 +1,5 @@
 import * as dat from "dat.gui";
-import { mapConfig } from "./mapConfig";
+import { mapConfig, updateMapDepth } from "./mapConfig";
 import { MapRuntime } from "./runtime";
 
 export function setupMapGui(runtime: MapRuntime) {
@@ -21,6 +21,41 @@ export function setupMapGui(runtime: MapRuntime) {
         ? `#${mapConfig.topLineColor.toString(16)}`
         : mapConfig.topLineColor,
   };
+
+  const geometryConfig = {
+    mapDepth: mapConfig.mapDepth,
+    topLineWidth: mapConfig.topLineWidth,
+    spotRadius: mapConfig.spotRadius,
+  };
+
+  gui
+    .add(geometryConfig, "mapDepth", 1, 20, 0.5)
+    .name("地图厚度")
+    .onFinishChange((value: number) => {
+      updateMapDepth(value);
+      runtime.requestRebuild();
+    });
+
+  gui
+    .add(geometryConfig, "topLineWidth", 1, 10, 0.5)
+    .name("顶线粗细")
+    .onChange((value: number) => {
+      mapConfig.topLineWidth = value;
+      runtime.mapObject3D?.traverse((obj: any) => {
+        if (obj.type === "Line2" && obj.material) {
+          obj.material.linewidth = value;
+          obj.material.needsUpdate = true;
+        }
+      });
+    });
+
+  gui
+    .add(geometryConfig, "spotRadius", 0.05, 1.5, 0.05)
+    .name("扩散点半径")
+    .onFinishChange((value: number) => {
+      mapConfig.spotRadius = value;
+      runtime.requestRebuild();
+    });
 
   gui
     .addColor(colorConfig, "mapColor")

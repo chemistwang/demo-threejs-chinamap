@@ -234,7 +234,7 @@ export const drawSpot = (coord: [number, number]) => {
     /**
      * 绘制圆点
      */
-    const spotGeometry = new THREE.CircleGeometry(0.2, 200);
+    const spotGeometry = new THREE.CircleGeometry(mapConfig.spotRadius, 200);
     const spotMaterial = new THREE.MeshBasicMaterial({
       color: "#3EC5FB",
       side: THREE.DoubleSide,
@@ -243,7 +243,11 @@ export const drawSpot = (coord: [number, number]) => {
     circle.position.set(coord[0], -coord[1], mapConfig.spotZIndex);
 
     // 圆环
-    const ringGeometry = new THREE.RingGeometry(0.2, 0.3, 50);
+    const ringGeometry = new THREE.RingGeometry(
+      mapConfig.spotRadius,
+      mapConfig.spotRadius + mapConfig.spotRingWidth,
+      50
+    );
     const ringMaterial = new THREE.MeshBasicMaterial({
       color: "#3FC5FB",
       side: THREE.DoubleSide,

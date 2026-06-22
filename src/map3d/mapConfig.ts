@@ -22,4 +22,13 @@ export const mapConfig = {
   label2dZIndex: Depth + 2,
   // spot
   spotZIndex: Depth + 0.2,
+  spotRadius: 0.2,
+  spotRingWidth: 0.1,
 };
+
+export function updateMapDepth(depth: number) {
+  mapConfig.mapDepth = depth;
+  mapConfig.topLineZIndex = depth + 0.5;
+  mapConfig.label2dZIndex = depth + 2;
+  mapConfig.spotZIndex = depth + 0.2;
+}
