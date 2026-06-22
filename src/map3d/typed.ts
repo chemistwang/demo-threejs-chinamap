@@ -1,5 +1,10 @@
 import { Object3D } from "three";
 
+export type ProjectionFnParamType = {
+  center: [number, number];
+  scale: number;
+};
+
 export interface GeoJsonType {
   type: "FeatureCollection";
   features: GeoJsonFeature[];

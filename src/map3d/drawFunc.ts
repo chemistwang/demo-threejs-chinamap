@@ -11,8 +11,8 @@ import {
   GeometryCoordinates,
   GeometryType,
   ExtendObject3D,
+  ProjectionFnParamType,
 } from "./typed";
-import { ProjectionFnParamType } from ".";
 import { mapConfig } from "./mapConfig";
 
 export function getDynamicMapScale(
